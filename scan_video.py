@@ -1,12 +1,31 @@
 # encoding=utf-8
 
 import requests
+import urllib
 import time
 import os
 import ssl
 
 
-def scan_vedio():
+def calc_download_speed(block_num, block_size, total_size, start_time):
+    """
+    :param block_num: 已下载的数据块大小
+    :param block_size: 数据块大小
+    :param total_size: 文件总大小
+    :param start_time: 开始下载时的时间点
+    :return:
+    """
+    # 已下载百分比
+    download_percent = '%.2f' % (block_num * block_size * 100 / total_size)
+    speed_bytes = (block_num * block_size) / (time.time() - start_time)
+    if speed_bytes < 1024:
+        speed_str = '%s KB/s' % float(speed_bytes / 1024)
+    else:
+        speed_str = '%s MB/s' % float(speed_bytes / 1024)
+    print '当前下载速度：%s | 当前下载百分比：%s' % (speed_str, download_percent)
+
+
+def scan_video():
     headers = {
         'Host': 'cn-jszj-dx-v-06.acgvideo.com',
         'Connection': 'keep-alive',
@@ -29,6 +48,8 @@ def scan_vedio():
             if os.path.exists(file_path):
                 headers['Range'] = 'bytes=%d-' % os.path.getsize(file_path)
             response = requests.get(url, headers=headers, stream=True, verify=False)
+
+            # 获取请求视频的长度
             content_length = int(response.headers['content-length'])
             if content_length < pre_content_length or (os.path.exists(file_path) and os.path.getsize(file_path) == content_length):
                 break
@@ -42,4 +63,4 @@ def scan_vedio():
         print e
 
 if __name__ == '__main__':
-    scan_vedio()
+    scan_video()
