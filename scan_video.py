@@ -27,15 +27,16 @@ def calc_download_speed(block_num, block_size, total_size, start_time):
 
 
 def convert_storage_read(bytes_content):
+    unit = 1024
     bytes_content = int(bytes_content)
-    if bytes_content < 1000:
+    if bytes_content < unit:
         return '%.2f bytes' % bytes_content
-    elif 1000 <= bytes_content < math.pow(1000, 2):
-        return '%.2f kb' % (bytes_content / 1000)
-    elif math.pow(1000, 2) <= bytes_content < math.pow(1000, 3):
-        return '%.2f mb' % (bytes_content / math.pow(1000, 2))
+    elif unit <= bytes_content < math.pow(unit, 2):
+        return '%.2f kb' % (bytes_content / unit)
+    elif math.pow(unit, 2) <= bytes_content < math.pow(unit, 3):
+        return '%.2f mb' % (bytes_content / math.pow(unit, 2))
     else:
-        return '%.2f gb' % (bytes_content / math.pow(1000, 3))
+        return '%.2f gb' % (bytes_content / math.pow(unit, 3))
 
 
 def scan_video():
@@ -49,27 +50,36 @@ def scan_video():
         'Accept-Encoding': 'gzip, deflate, br',
         'Accept-Language': 'zh-CN,zh;q=0.9',
     }
-    pre_content_length = 0
+    # 文件的初始大小
+    file_content_length = 0
+    # 网络中数据流的初始化大小
+    all_content_length = 0
+    # 请求的url
+    url = r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/07/82/50108207/50108207-1-32.flv?e=ig8euxZM2rNcNbNVnWRVhoMMhW4ghwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539680709&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=209100&trid=a3ca314910e04caabee6c9bbdfb2819c&uipk=5&uipv=5&um_deadline=1539680709&um_sign=9d7cf242ca446644c7766b3ab775c5dd&upsig=711f29a36422d453797dce8ba73078d1'
     file_path = os.path.join(os.path.dirname(__file__), '1.flv')
     try:
-        url = r'https://upos-hz-mirrorcos.acgvideo.com/upgcxcode/07/82/50108207/50108207-1-64.flv?um_deadline=1539619108&platform=pc&rate=207400&oi=997036720&um_sign=7c669f44449971a4be547da8ad2462f3&gen=playurl&os=cos&trid=8f41893986a44612a99fc011d6349817'
+        if not all_content_length:
+            # 接通连接但未请求数据
+            response = requests.get(url, headers=headers, stream=True, verify=False)
+            all_content_length = int(response.headers['content-length'])
         while True:
             if os.path.exists(file_path):
-                headers['Range'] = 'bytes=%d-' % os.path.getsize(file_path)
-            response = requests.get(url, headers=headers, stream=True, verify=False)
-            print response.headers
-
-            # 获取请求视频的长度
-            content_length = int(response.headers['content-length'])
-            if content_length < pre_content_length or (os.path.exists(file_path) and os.path.getsize(file_path) == content_length):
-                break
-            pre_content_length = content_length
+                # 已获取到视频的bytes数
+                file_content_length = os.path.getsize(file_path)
+                # 判断是否已经获取到视频全部数据
+                if file_content_length == all_content_length:
+                    break
+            headers['Range'] = 'bytes=%d-' % file_content_length
+            if not response:
+                response = requests.get(url, headers=headers, stream=True, verify=False)
 
             with open(file_path, 'ab') as f:
+                # 在此处下载数据
                 f.write(response.content)
+                # 从内存中写入文件
                 f.flush()
                 print('receive data，file size : %s   total size: %s' %
-                      (convert_storage_read(os.path.getsize(file_path)), convert_storage_read(content_length)))
+                      (convert_storage_read(os.path.getsize(file_path)), convert_storage_read(all_content_length)))
     except Exception as e:
         print e
 
