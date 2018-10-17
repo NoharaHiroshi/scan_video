@@ -51,45 +51,38 @@ def scan_video():
         'Accept-Encoding': 'gzip, deflate, br',
         'Accept-Language': 'zh-CN,zh;q=0.9',
     }
-    # 文件的初始大小
-    file_content_length = 0
-    # 网络中数据流的初始化大小
-    all_content_length = 0
     # 请求的url
-    url = r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/07/82/50108207/50108207-1-32.flv?e=ig8euxZM2rNcNbNVnWRVhoMMhW4ghwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539781402&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=209100&trid=0bb32aa0afa7457a9d6ee0bd66a9c5ca&uipk=5&uipv=5&um_deadline=1539781402&um_sign=ff76e5b31b0e238160660f5a048c6239&upsig=20d3b702c6ea11c2aa31279cf45bcb4d'
+    url = r'https://cn-jszj-dx-v-06.acgvideo.com/upgcxcode/41/96/34659641/34659641-1-32.flv?expires=1539782400&platform=pc&ssig=gG7tW1RgWKkh_a06LIWuaA&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfa=2046049971&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=d74a584db95d4174a7b678b26094aed3&nfc=1'
     file_path = os.path.join(os.path.dirname(__file__), '1.flv')
     try:
-        if not all_content_length:
-            # 接通连接但未请求数据
-            response = requests.get(url, headers=headers, stream=True, verify=False)
-            all_content_length = int(response.headers['content-length'])
-        while True:
-            if os.path.exists(file_path):
-                # 已获取到视频的bytes数
-                file_content_length = os.path.getsize(file_path)
-                # 判断是否已经获取到视频全部数据
-                if file_content_length == all_content_length:
-                    break
-            headers['Range'] = 'bytes=%d-' % file_content_length
-            if not response:
+        response = requests.get(url, headers=headers, stream=True, verify=False)
+        all_content_length = int(response.headers['content-length'])
+        if os.path.exists(file_path):
+            # 已获取到视频的bytes数
+            file_content_length = os.path.getsize(file_path)
+            # 判断是否已经获取到视频全部数据
+            if file_content_length < all_content_length:
+                headers['Range'] = 'bytes=%d-' % file_content_length
                 response = requests.get(url, headers=headers, stream=True, verify=False)
-
-            with open(file_path, 'ab') as f:
-                # 在此处下载数据
-                current_length = os.path.getsize(file_path)
-                # 块大小1m, 1m 刷新一次
-                block_size = pow(1024, 2)
-                start_time = time.time()
-                for block in response.iter_content(chunk_size=block_size):
-                    if block:
-                        f.write(block)
-                        f.flush()
-                        current_length += block_size
-                        if current_length > all_content_length:
-                            current_length = all_content_length
-                        end_time = time.time()
-                        download_bar(all_content_length, current_length, block_size, start_time, end_time)
-                        start_time = time.time()
+            else:
+                print u'视频已下载完成'
+                return
+        with open(file_path, 'ab') as f:
+            # 在此处下载数据
+            current_length = os.path.getsize(file_path)
+            # 块大小1m, 1m 刷新一次
+            block_size = pow(1024, 2)
+            start_time = time.time()
+            for block in response.iter_content(chunk_size=block_size):
+                if block:
+                    f.write(block)
+                    f.flush()
+                    current_length += block_size
+                    if current_length > all_content_length:
+                        current_length = all_content_length
+                    end_time = time.time()
+                    download_bar(all_content_length, current_length, block_size, start_time, end_time)
+                    start_time = time.time()
     except Exception as e:
         print e
 
