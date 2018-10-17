@@ -11,7 +11,7 @@ import sys
 
 
 def download_bar(total_size, current_size, block_size, start_time, end_time):
-    download_flag = u'|'
+    download_flag = u'▎'
     not_download_flag = u'·'
     percent = int(float(current_size) / total_size * 20)
     current_speed = float(block_size) / (end_time - start_time)
@@ -23,9 +23,8 @@ def download_bar(total_size, current_size, block_size, start_time, end_time):
                                                                convert_storage_read(current_size),
                                                                convert_storage_read(current_speed)
                                                                )
-    print percent_bar_str
+    sys.stdout.write('\r' + percent_bar_str)
     sys.stdout.flush()
-    time.sleep(1)
 
 
 def convert_storage_read(bytes_content):
@@ -57,7 +56,7 @@ def scan_video():
     # 网络中数据流的初始化大小
     all_content_length = 0
     # 请求的url
-    url = r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/07/82/50108207/50108207-1-32.flv?e=ig8euxZM2rNcNbNVnWRVhoMMhW4ghwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539774028&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=209100&trid=1fa10cec170741c4aab5a35dbb14975b&uipk=5&uipv=5&um_deadline=1539774028&um_sign=751a892345e4dffcd9fe6d3057f5671d&upsig=1dcd7beb98d7ead2d9f679b8c870df7f'
+    url = r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/07/82/50108207/50108207-1-32.flv?e=ig8euxZM2rNcNbNVnWRVhoMMhW4ghwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539781402&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=209100&trid=0bb32aa0afa7457a9d6ee0bd66a9c5ca&uipk=5&uipv=5&um_deadline=1539781402&um_sign=ff76e5b31b0e238160660f5a048c6239&upsig=20d3b702c6ea11c2aa31279cf45bcb4d'
     file_path = os.path.join(os.path.dirname(__file__), '1.flv')
     try:
         if not all_content_length:
@@ -89,7 +88,6 @@ def scan_video():
                         if current_length > all_content_length:
                             current_length = all_content_length
                         end_time = time.time()
-                        print all_content_length, current_length
                         download_bar(all_content_length, current_length, block_size, start_time, end_time)
                         start_time = time.time()
     except Exception as e:
