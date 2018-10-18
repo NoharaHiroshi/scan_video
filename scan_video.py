@@ -109,5 +109,27 @@ def scan_video():
     except Exception as e:
         print e
 
+
+def merge_video(file_path):
+    # 判断待合并文件是否已存在
+    if os.path.exists(file_path):
+        print '待合并文件已存在'
+        return
+    print '待合并文件： %s' % file_path
+    root_path = os.path.dirname(file_path)
+    file_name_list = os.listdir(root_path)
+    file_name = file_path.split('\\')[-1]
+    merge_file_list = [f for f in file_name_list if f.split('_')[0] == file_name.split('.')[0]]
+    print '当前待合并文件列表： %s' % ', '.join(merge_file_list)
+    with open(file_path, 'ab') as f:
+        for merge_file in merge_file_list:
+            merge_full_file = os.path.join(root_path, merge_file)
+            part_f = open(merge_full_file, mode='rb')
+            part_f_content = part_f.read()
+            f.write(part_f_content)
+            print '已合并文件： %s' % merge_file
+    print '合并完成'
+
 if __name__ == '__main__':
-    scan_video()
+    # scan_video()
+    merge_video(os.path.join(os.path.dirname(__file__), '1.flv'))
