@@ -8,6 +8,13 @@ import os
 import ssl
 import math
 import sys
+from selenium import webdriver
+
+
+def web_scan(url):
+    with webdriver.PhantomJS() as browser:
+        browser.get(url)
+        print browser.page_source
 
 
 def download_bar(total_size, current_size, block_size, start_time, end_time):
@@ -53,36 +60,52 @@ def scan_video():
     }
     # 请求的url
     url = r'https://cn-jszj-dx-v-06.acgvideo.com/upgcxcode/41/96/34659641/34659641-1-32.flv?expires=1539782400&platform=pc&ssig=gG7tW1RgWKkh_a06LIWuaA&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfa=2046049971&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=d74a584db95d4174a7b678b26094aed3&nfc=1'
+
+    url_list = [
+        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-1-32.flv?e=ig8euxZM2rNcNbNz7bhVhoMM7zNjhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539864775&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=236300&trid=4f90adac328347a48c7e3920552ee30c&uipk=5&uipv=5&um_deadline=1539864775&um_sign=78453b7d29700f165854f1ab954c68d4&upsig=85b5333ca216b9ed23d958e772104443',
+        r'https://cn-jszj-dx-v-03.acgvideo.com/upgcxcode/41/96/34659641/34659641-2-32.flv?expires=1539863400&platform=pc&ssig=8tS4-HBDws2y02flJPHR2A&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=da44bc16571c4dfd977329f9cb77eee4&nfc=1',
+        r'https://cn-jszj-dx-v-06.acgvideo.com/upgcxcode/41/96/34659641/34659641-3-32.flv?expires=1539863400&platform=pc&ssig=LI6MsaoErrW_rphWZUBZLA&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=da44bc16571c4dfd977329f9cb77eee4&nfc=1',
+        r'https://cn-jszj-dx-v-03.acgvideo.com/upgcxcode/41/96/34659641/34659641-4-32.flv?expires=1539863400&platform=pc&ssig=V6JHAn4Vuua9q0g6kIxV2w&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=da44bc16571c4dfd977329f9cb77eee4&nfc=1',
+        r'https://cn-jszj-dx-v-03.acgvideo.com/upgcxcode/41/96/34659641/34659641-5-32.flv?expires=1539863400&platform=pc&ssig=RLylD9nnZcMi2PD69R9RpQ&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=da44bc16571c4dfd977329f9cb77eee4&nfc=1',
+        r'https://cn-jszj-dx-v-05.acgvideo.com/upgcxcode/41/96/34659641/34659641-6-32.flv?expires=1539863400&platform=pc&ssig=rKssmj6f4fKcCubXBxFJwQ&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=da44bc16571c4dfd977329f9cb77eee4&nfc=1',
+        r'https://cn-jszj-dx-v-05.acgvideo.com/upgcxcode/41/96/34659641/34659641-7-32.flv?expires=1539863400&platform=pc&ssig=vZB9AiV7LlICZfQJvPbpPQ&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=da44bc16571c4dfd977329f9cb77eee4&nfc=1',
+        r'https://cn-jszj-dx-v-03.acgvideo.com/upgcxcode/41/96/34659641/34659641-8-32.flv?expires=1539863400&platform=pc&ssig=k7jRzS1pFs8O0-FImDzsOw&oi=1897879350&nfa=uTIiNt+AQjcYULykM2EttA==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=da44bc16571c4dfd977329f9cb77eee4&nfc=1',
+    ]
     file_path = os.path.join(os.path.dirname(__file__), '1.flv')
+    print '当前视频共有%s部分' % str(len(url_list))
     try:
-        response = requests.get(url, headers=headers, stream=True, verify=False)
-        all_content_length = int(response.headers['content-length'])
-        if os.path.exists(file_path):
-            # 已获取到视频的bytes数
-            file_content_length = os.path.getsize(file_path)
-            # 判断是否已经获取到视频全部数据
-            if file_content_length < all_content_length:
-                headers['Range'] = 'bytes=%d-' % file_content_length
-                response = requests.get(url, headers=headers, stream=True, verify=False)
-            else:
-                print u'视频已下载完成'
-                return
-        with open(file_path, 'ab') as f:
-            # 在此处下载数据
-            current_length = os.path.getsize(file_path)
-            # 块大小1m, 1m 刷新一次
-            block_size = pow(1024, 2)
-            start_time = time.time()
-            for block in response.iter_content(chunk_size=block_size):
-                if block:
-                    f.write(block)
-                    f.flush()
-                    current_length += block_size
-                    if current_length > all_content_length:
-                        current_length = all_content_length
-                    end_time = time.time()
-                    download_bar(all_content_length, current_length, block_size, start_time, end_time)
-                    start_time = time.time()
+        for i, url in enumerate(url_list):
+            print '当前正在下载%s部分' % str(i+1)
+            file_path_list = file_path.split('.')
+            part_file_path = '%s_%s.%s' % (file_path_list[0], str(i), file_path_list[-1])
+            response = requests.get(url, headers=headers, stream=True, verify=False)
+            all_content_length = int(response.headers['content-length'])
+            if os.path.exists(part_file_path):
+                # 已获取到视频的bytes数
+                file_content_length = os.path.getsize(part_file_path)
+                # 判断是否已经获取到视频全部数据
+                if file_content_length < all_content_length:
+                    headers['Range'] = 'bytes=%d-' % file_content_length
+                    response = requests.get(url, headers=headers, stream=True, verify=False)
+                else:
+                    print u'视频已下载完成'
+                    return
+            with open(part_file_path, 'ab') as f:
+                # 在此处下载数据
+                current_length = os.path.getsize(part_file_path)
+                # 块大小1m, 1m 刷新一次
+                block_size = pow(1024, 2)
+                start_time = time.time()
+                for block in response.iter_content(chunk_size=block_size):
+                    if block:
+                        f.write(block)
+                        f.flush()
+                        current_length += block_size
+                        if current_length > all_content_length:
+                            current_length = all_content_length
+                        end_time = time.time()
+                        download_bar(all_content_length, current_length, block_size, start_time, end_time)
+                        start_time = time.time()
     except Exception as e:
         print e
 
