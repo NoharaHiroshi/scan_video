@@ -13,6 +13,15 @@ import threading
 import traceback
 from selenium import webdriver
 
+# 视频总大小
+total_size = 0
+# 当前下载视频大小
+current_size = 0
+# 启动时间
+start_time = time.time()
+# 上次下载视频大小
+last_size = 0
+
 
 def web_scan(url):
     with webdriver.PhantomJS() as browser:
@@ -20,13 +29,10 @@ def web_scan(url):
         print browser.page_source
 
 
-def download_bar(all_file_size, all_current_size, file_size, current_size,
-                 part_index, start_time, end_time, all_percent_bar_list):
+def download_bar(part_file_size, part_current_size, part_index, all_percent_bar_list):
     """
-    :param all_file_size: 当前完整视频文件的大小
-    :param all_current_size：完整视频已下载的大小
-    :param file_size: 部分视频文件的大小
-    :param current_size: 部分视频已下载的文件大小
+    :param part_file_size: 部分视频大小
+    :param part_current_size: 部分视频已下载大小
     :param part_index: 部分视频的索引
     :param all_part_num: 所有部分视频的数量
     :param block_size: 块大小
@@ -34,17 +40,22 @@ def download_bar(all_file_size, all_current_size, file_size, current_size,
     :param end_time: 结束时间
     :return:
     """
+    global total_size
+    global current_size
+    global start_time
+    global last_size
+    end_time = time.time()
     download_flag = u'|'
     not_download_flag = u'·'
     # 部分视频文件下载的百分比 0 - 10
-    percent = int(float(current_size) / file_size * 10)
-    current_speed = float(all_file_size - all_current_size) / (end_time - start_time + 1)
+    percent = int(float(part_current_size) / part_file_size * 10)
+    current_speed = float(current_size - last_size) / (end_time - start_time + 1)
     percent_bar_str = u'%s%s' % (download_flag * percent, not_download_flag * (10 - percent))
     all_percent_bar_list[part_index-1] = percent_bar_str
     info_str = u'- %s%% | total_size: %s | download_size: %s | speed: %s / s' % (
-                                                                round((float(all_current_size) / all_file_size), 2),
-                                                                convert_storage_read(all_file_size),
-                                                                convert_storage_read(all_current_size),
+                                                                round((float(current_size) / total_size), 2),
+                                                                convert_storage_read(total_size),
+                                                                convert_storage_read(current_size),
                                                                 convert_storage_read(current_speed)
                                                                 )
     all_percent_bar_str = u'%s%s' % (u' '.join(all_percent_bar_list), info_str)
@@ -70,9 +81,7 @@ def thread_scan_video(url_list):
         'info': '',
         'response': 'success'
     }
-    file_path = os.path.join(os.path.dirname(__file__), '2.flv')
-    total_size = 0
-    current_size = 0
+    file_path = os.path.join(os.path.dirname(__file__), 'butterfly01.flv')
     all_part_num = len(url_list)
     all_percent_bar_list = [u'·' * 10 for i in range(all_part_num)]
     print '当前视频共有%s部分' % str(all_part_num)
@@ -102,49 +111,54 @@ def thread_scan_video(url_list):
                 })
                 return result
             t = threading.Thread(target=download_video, name='第%s部分' % part_index,
-                                 args=(url, part_file_path, headers, part_index, total_size, current_size, all_percent_bar_list))
+                                 args=(url, part_file_path, headers, part_index, all_percent_bar_list))
             t.start()
     except Exception as e:
         print e
 
 
-def download_video(url, part_file_path, headers, part_index, all_file_size, current_file_size, all_percent_bar_list):
+def download_video(url, part_file_path, headers, part_index, all_percent_bar_list):
     try:
         print '正在获取 %s ' % str(threading.current_thread().name)
         response = requests.get(url, headers=headers, stream=True, verify=False)
-        all_content_length = int(response.headers['content-length'])
-        if not all_content_length:
+        part_video_size = int(response.headers['content-length'])
+        if not part_video_size:
             print '未获取到第%s部分视频数据' % part_index
             return
-        all_file_size += all_content_length
+        global total_size
+        global current_size
+        global last_size
+        # 视频文件总大小
+        total_size += part_video_size
+        # 当前视频文件大小
+        part_file_size = 0
         if os.path.exists(part_file_path):
             # 已获取到视频的bytes数
-            file_content_length = os.path.getsize(part_file_path)
+            part_file_size = os.path.getsize(part_file_path)
+            current_size += part_file_size
+            last_size += part_file_size
             # 判断是否已经获取到视频全部数据
-            if file_content_length < all_content_length:
-                headers['Range'] = 'bytes=%d-' % file_content_length
+            if part_file_size < part_video_size:
+                headers['Range'] = 'bytes=%d-' % part_file_size
                 response = requests.get(url, headers=headers, stream=True, verify=False)
             else:
-                print u'视频已下载完成'
+                print u'第%s部分视频已下载完成' % part_index
                 return
         with open(part_file_path, 'ab') as f:
-            # 在此处下载数据
-            current_length = os.path.getsize(part_file_path)
             # 块大小1m, 1m 刷新一次
             block_size = pow(1024, 2)
-            start_time = time.time()
             for block in response.iter_content(chunk_size=block_size):
                 if block:
                     f.write(block)
                     f.flush()
-                    current_length += block_size
-                    current_file_size += current_length
-                    if current_length > all_content_length:
-                        current_length = all_content_length
-                    end_time = time.time()
-                    download_bar(all_file_size, current_file_size, all_content_length, current_length,
-                                 part_index, start_time, end_time, all_percent_bar_list)
-                    start_time = time.time()
+                    # 当前部分视频文件大小
+                    part_file_size += block_size
+                    # 当前视频文件大小
+                    current_size += block_size
+                    if part_file_size > part_video_size:
+                        part_file_size = part_video_size
+                    download_bar(part_video_size, part_file_size,
+                                 part_index, all_percent_bar_list)
     except Exception as e:
         print traceback.format_exc(e)
 
@@ -174,13 +188,13 @@ if __name__ == '__main__':
     # scan_video()
     # merge_video(os.path.join(os.path.dirname(__file__), '1.flv'))
     url_list = [
-        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-1-15.flv?e=ig8euxZM2rNcNbRVhwhVhoMghwdjhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539946681&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=100300&trid=e7dfe0f420294c7ebe66f86a1b366334&uipk=5&uipv=5&um_deadline=1539946681&um_sign=0283b646004fd50f381a9833c375e778&upsig=46ce5014f0255f8897981fd49555dea2',
-        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-2-15.flv?e=ig8euxZM2rNcNbRVhzuVhoMghwuMhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539946681&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=103700&trid=e7dfe0f420294c7ebe66f86a1b366334&uipk=5&uipv=5&um_deadline=1539946681&um_sign=33d588a6f06df20acdbcd91f1839dedd&upsig=4f1ef872e2f1e1512207f6d570b0c7f4',
-        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-3-15.flv?e=ig8euxZM2rNcNbRVhwhVhoMghwdjhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539946681&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=100300&trid=e7dfe0f420294c7ebe66f86a1b366334&uipk=5&uipv=5&um_deadline=1539946681&um_sign=d0c9f32db7303561c1078d9050411f18&upsig=4fe9139c3ec326bd27029a6e2a9afb07',
-        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-4-64.flv?e=ig8euxZM2rNcNbha7wdVhoMa7w4VhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539947403&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=374000&trid=32f859003ecf4845a53739bbd599ffd7&uipk=5&uipv=5&um_deadline=1539947403&um_sign=7332fc70fab21e21b2a94c197c1bb0c0&upsig=242e111d1cc80673ec56b207eeb937fb',
-        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-5-15.flv?e=ig8euxZM2rNcNbRV7WKVhoMghWd3hwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539946681&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=105400&trid=e7dfe0f420294c7ebe66f86a1b366334&uipk=5&uipv=5&um_deadline=1539946681&um_sign=64b30b30b78fba7d899eeb151087886e&upsig=90c01686a8e9096e8c440536d12df023',
-        r'https://upos-hz-mirrorks3u.acgvideo.com/upgcxcode/73/96/34659673/34659673-6-64.flv?e=ig8euxZM2rNcNbhjnweVhoMahzu3hwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539947403&gen=playurl&oi=1897879350&os=ks3u&platform=pc&trid=32f859003ecf4845a53739bbd599ffd7&uipk=5&uipv=5&upsig=fdb59b2eaefe239dc4cb3706af2cd15b',
-        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-7-15.flv?e=ig8euxZM2rNcNbejnWdVtWRHhz4VhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEVEuxTEto8i8o859r1qXg8xNEVE5XREto8GuFGv2U7SuxI72X6fTr859IB_&deadline=1539946681&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=96900&trid=e7dfe0f420294c7ebe66f86a1b366334&uipk=5&uipv=5&um_deadline=1539946681&um_sign=0ca76a63914b8c77a511f9347590b364&upsig=c96793789c6b3badb5003b7690d6ed7e',
-        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/73/96/34659673/34659673-8-15.flv?e=ig8euxZM2rNcNbR17WTVhoMghzRghwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1539946681&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=115600&trid=e7dfe0f420294c7ebe66f86a1b366334&uipk=5&uipv=5&um_deadline=1539946681&um_sign=d1f38f875602b3a28b85b164fee28ab6&upsig=76f4c992718b5c47ea2b6b5bfd0372dd'
+        r'https://upos-hz-mirrorks3u.acgvideo.com/upgcxcode/41/96/34659641/34659641-1-64.flv?e=ig8euxZM2rNcNbhj7zNVhoMahzKMhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1540210175&gen=playurl&oi=1897879350&os=ks3u&platform=pc&trid=98aac7bcc1224e6e962d044f029071d9&uipk=5&uipv=5&upsig=70ca83b16405aa86ec5f6460e1f3009b',
+        r'https://upos-hz-mirrorks3u.acgvideo.com/upgcxcode/41/96/34659641/34659641-2-64.flv?e=ig8euxZM2rNcNbhjnweVhoMahzu3hwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1540210175&gen=playurl&oi=1897879350&os=ks3u&platform=pc&trid=98aac7bcc1224e6e962d044f029071d9&uipk=5&uipv=5&upsig=3661523c276044f8da71aae57dbfd273',
+        r'https://cn-jszj-dx-v-01.acgvideo.com/upgcxcode/41/96/34659641/34659641-3-64.flv?expires=1540209900&platform=pc&ssig=UkGR2uYEaGOoL2g95amKiQ&oi=1897879350&nfa=BpfiWF+i4mNW8KzjZFHzBQ==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=98aac7bcc1224e6e962d044f029071d9&nfc=1',
+        r'https://cn-jszj-dx-v-01.acgvideo.com/upgcxcode/41/96/34659641/34659641-4-64.flv?expires=1540209900&platform=pc&ssig=TCTrnvpr3iXdtBABlTGCDg&oi=1897879350&nfa=BpfiWF+i4mNW8KzjZFHzBQ==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=98aac7bcc1224e6e962d044f029071d9&nfc=1',
+        r'https://upos-hz-mirrorks3u.acgvideo.com/upgcxcode/41/96/34659641/34659641-5-64.flv?e=ig8euxZM2rNcNbhjhz4VhoMahbujhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1540210175&gen=playurl&oi=1897879350&os=ks3u&platform=pc&trid=98aac7bcc1224e6e962d044f029071d9&uipk=5&uipv=5&upsig=03a35b29a77adedcc5c5277361304e17',
+        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/41/96/34659641/34659641-6-64.flv?e=ig8euxZM2rNcNbhjnweVhoMahzu3hwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1540210175&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=368900&trid=98aac7bcc1224e6e962d044f029071d9&uipk=5&uipv=5&um_deadline=1540210175&um_sign=cee6680ff6813bbbb98a8c4dd7d7dece&upsig=ffbaa4a4fef56140eac41b946f30df64',
+        r'https://cn-jszj-dx-v-01.acgvideo.com/upgcxcode/41/96/34659641/34659641-7-64.flv?expires=1540209900&platform=pc&ssig=BdiaaG9TL2HqoxcOupalxA&oi=1897879350&nfa=BpfiWF+i4mNW8KzjZFHzBQ==&dynamic=1&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=98aac7bcc1224e6e962d044f029071d9&nfc=1',
+        r'https://upos-hz-mirrorkodo.acgvideo.com/upgcxcode/41/96/34659641/34659641-8-64.flv?e=ig8euxZM2rNcNbh37zTVhoMa7zUghwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1540210175&dynamic=1&gen=playurl&oi=1897879350&os=kodo&platform=pc&rate=387600&trid=98aac7bcc1224e6e962d044f029071d9&uipk=5&uipv=5&um_deadline=1540210175&um_sign=7bcea66598edf77998269be3507b638a&upsig=e13ab9eb1bc40ac51440983d5ff0ffd6'
     ]
     thread_scan_video(url_list)
