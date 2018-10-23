@@ -56,8 +56,9 @@ class DownloadBilibiliVideo:
         current_speed = float(self.current_size - self.last_size) / time_interval
         percent_bar_str = u'%s%s' % (download_flag * percent, not_download_flag * (self.part_download_bar_num - percent))
         self.all_percent_bar_list[part_index - 1] = percent_bar_str
+        download_percent = round((float(self.current_size) / self.total_size) * 100, 2)
         info_str = u'- %s%% | total_size: %s | download_size: %s | speed: %s / s' % (
-            round((float(self.current_size) / self.total_size) * 100, 2),
+            download_percent if download_percent <= 100 else 100,
             self.convert_storage_read(self.total_size),
             self.convert_storage_read(self.current_size),
             self.convert_storage_read(current_speed)
@@ -79,6 +80,10 @@ class DownloadBilibiliVideo:
 
     def assign_download_task(self, url_list):
         file_path = os.path.join(os.path.dirname(__file__), self.file_name)
+        # 判断当前文件是否已存在
+        if os.path.exists(file_path):
+            print u'current file is exist'
+            return
         all_part_num = len(url_list)
         # 初始化下载进度条
         self.all_percent_bar_list = [u'·' * 10 for i in range(all_part_num)]
@@ -141,8 +146,8 @@ class DownloadBilibiliVideo:
             print traceback.format_exc(e)
 
 if __name__ == '__main__':
-    bd = DownloadBilibiliVideo('jojo01.flv')
+    bd = DownloadBilibiliVideo('jojo38.flv')
     url_list = [
-        r'https://cn-jszj-dx-v-08.acgvideo.com/upgcxcode/01/05/57290501/57290501-1-80.flv?expires=1540281600&platform=pc&ssig=vMk419sb-DrtvFl_P8WoGA&oi=1897879350&nfa=VTtnXeacAlS5k6cLdWuWIA==&dynamic=1&hfa=2046662768&hfb=Yjk5ZmZjM2M1YzY4ZjAwYTMzMTIzYmIyNWY4ODJkNWI=&trid=bd46413f769b43cf9b422fc606a0df46&nfc=1'
+        r'https://upos-hz-mirrorbos.acgvideo.com/upgcxcode/60/64/57506460/57506460-1-80.flv?e=ig8euxZM2rNcNbKa7zuVhoMH7WUMhwdEto8g5X10ugNcXBlqNxHxNEVE5XREto8KqJZHUa6m5J0SqE85tZvEuENvNC8xNEVE9EKE9IMvXBvE2ENvNCImNEVEK9GVqJIwqa80WXIekXRE9IB5QK==&deadline=1540289387&dynamic=1&gen=playurl&oi=1897879350&os=bos&platform=pc&rate=477700&trid=e5b6b2939f534c289a57642e9fa978b8&uipk=5&uipv=5&um_deadline=1540289387&um_sign=b7cad1a0ec9072b9f22053053b1416b7&upsig=6444a2edb6ce4b8d2c30be3cc6d4885a'
     ]
     bd.assign_download_task(url_list)
